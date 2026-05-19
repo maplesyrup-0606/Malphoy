@@ -21,6 +21,7 @@ final class WindowController {
         panel.hasShadow = true
         panel.isMovable = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.becomesKeyOnlyIfNeeded = false
 
         let visualEffect = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         visualEffect.material = .hudWindow
@@ -54,9 +55,9 @@ final class WindowController {
 
     func show() {
         center()
-        contentView.reset()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        contentView.reset()
     }
 
     func hide() {

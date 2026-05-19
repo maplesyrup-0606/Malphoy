@@ -5,6 +5,8 @@ final class FilesTab: NSView {
     private var filtered: [URL] = []
     private var selectedIndex: Int = 0
 
+    var onTabKey: (() -> Void)?
+
     private let searchField: NSTextField
     private let tableView: NSTableView
     private let scrollView: NSScrollView
@@ -142,6 +144,12 @@ final class FilesTab: NSView {
         tableView.reloadData()
     }
 
+    // MARK: - Focus
+
+    func focusInput() {
+        window?.makeFirstResponder(searchField)
+    }
+
     // MARK: - Keyboard
 
     override var acceptsFirstResponder: Bool { true }
@@ -161,6 +169,28 @@ final class FilesTab: NSView {
 extension FilesTab: NSTextFieldDelegate {
     func controlTextDidChange(_ obj: Notification) {
         filterFiles(query: searchField.stringValue)
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        switch commandSelector {
+        case #selector(NSResponder.insertTab(_:)):
+            onTabKey?()
+            return true
+        case #selector(NSResponder.cancelOperation(_:)):
+            window?.orderOut(nil)
+            return true
+        case #selector(NSResponder.moveDown(_:)):
+            moveSelection(by: 1)
+            return true
+        case #selector(NSResponder.moveUp(_:)):
+            moveSelection(by: -1)
+            return true
+        case #selector(NSResponder.insertNewline(_:)):
+            revealSelected()
+            return true
+        default:
+            return false
+        }
     }
 }
 

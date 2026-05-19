@@ -1,6 +1,8 @@
 import AppKit
 
 final class TodoTab: NSView {
+    var onTabKey: (() -> Void)?
+
     private var selectedIndex: Int = 0
 
     private let inputField: NSTextField
@@ -122,6 +124,12 @@ final class TodoTab: NSView {
         tableView.reloadData()
     }
 
+    // MARK: - Focus
+
+    func focusInput() {
+        window?.makeFirstResponder(inputField)
+    }
+
     // MARK: - Keyboard
 
     override var acceptsFirstResponder: Bool { true }
@@ -147,6 +155,32 @@ final class TodoTab: NSView {
 extension TodoTab: NSTextFieldDelegate {
     func controlTextDidChange(_ obj: Notification) {
         // input only — no filtering
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        switch commandSelector {
+        case #selector(NSResponder.insertTab(_:)):
+            onTabKey?()
+            return true
+        case #selector(NSResponder.cancelOperation(_:)):
+            window?.orderOut(nil)
+            return true
+        case #selector(NSResponder.moveDown(_:)):
+            moveSelection(by: 1)
+            return true
+        case #selector(NSResponder.moveUp(_:)):
+            moveSelection(by: -1)
+            return true
+        case #selector(NSResponder.insertNewline(_:)):
+            if !inputField.stringValue.trimmingCharacters(in: .whitespaces).isEmpty {
+                addTodo()
+            } else {
+                toggleSelected()
+            }
+            return true
+        default:
+            return false
+        }
     }
 }
 

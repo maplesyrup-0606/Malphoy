@@ -32,6 +32,16 @@ final class ContentView: NSView {
             ])
         }
 
+        let nextTab: () -> Void = { [weak self] in
+            guard let self else { return }
+            self.currentTab = (self.currentTab + 1) % 4
+            self.switchTab()
+        }
+        appsTab.onTabKey = nextTab
+        filesTab.onTabKey = nextTab
+        todoTab.onTabKey = nextTab
+        calculatorTab.onTabKey = nextTab
+
         switchTab()
     }
 
@@ -56,7 +66,17 @@ final class ContentView: NSView {
     private func switchTab() {
         tabs.forEach { $0.isHidden = true }
         tabs[currentTab].isHidden = false
-        window?.makeFirstResponder(tabs[currentTab])
+        focusCurrentTabInput()
+    }
+
+    private func focusCurrentTabInput() {
+        switch currentTab {
+        case 0: appsTab.focusInput()
+        case 1: filesTab.focusInput()
+        case 2: todoTab.focusInput()
+        case 3: calculatorTab.focusInput()
+        default: break
+        }
     }
 
     func reset() {

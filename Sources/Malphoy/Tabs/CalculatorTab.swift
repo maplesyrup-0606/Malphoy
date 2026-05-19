@@ -1,6 +1,8 @@
 import AppKit
 
 final class CalculatorTab: NSView {
+    var onTabKey: (() -> Void)?
+
     private let inputField: NSTextField
     private let resultLabel: NSTextField
     private let hintLabel: NSTextField
@@ -135,6 +137,12 @@ final class CalculatorTab: NSView {
         }
     }
 
+    // MARK: - Focus
+
+    func focusInput() {
+        window?.makeFirstResponder(inputField)
+    }
+
     // MARK: - Keyboard
 
     override var acceptsFirstResponder: Bool { true }
@@ -159,6 +167,22 @@ extension CalculatorTab: NSTextFieldDelegate {
         } else {
             resultLabel.stringValue = expr.isEmpty ? "" : "..."
             resultLabel.textColor = NSColor.white.withAlphaComponent(0.3)
+        }
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        switch commandSelector {
+        case #selector(NSResponder.insertTab(_:)):
+            onTabKey?()
+            return true
+        case #selector(NSResponder.cancelOperation(_:)):
+            window?.orderOut(nil)
+            return true
+        case #selector(NSResponder.insertNewline(_:)):
+            copyResult()
+            return true
+        default:
+            return false
         }
     }
 }

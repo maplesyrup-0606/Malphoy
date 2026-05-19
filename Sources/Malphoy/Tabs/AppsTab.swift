@@ -117,7 +117,7 @@ final class AppsTab: NSView {
                 return match ? (url, score) : nil
             }
             .sorted { $0.1 > $1.1 }
-            .prefix(8)
+            .prefix(20)
             .map { $0.0 }
 
         tableView.reloadData()
@@ -134,12 +134,14 @@ final class AppsTab: NSView {
     private func resetSelection() {
         selectedIndex = 0
         tableView.reloadData()
+        tableView.scrollRowToVisible(0)
     }
 
     private func moveSelection(by delta: Int) {
         guard !filtered.isEmpty else { return }
         selectedIndex = max(0, min(filtered.count - 1, selectedIndex + delta))
         tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
     }
 
     // MARK: - Focus

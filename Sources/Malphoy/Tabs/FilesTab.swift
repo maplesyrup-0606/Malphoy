@@ -30,7 +30,7 @@ final class FilesTab: NSView {
     // MARK: - UI Setup
 
     private func setupSearchField() {
-        searchField.placeholderString = "Search files..."
+        searchField.placeholderString = "Search files and folders..."
         searchField.isBezeled = false
         searchField.drawsBackground = false
         searchField.font = NSFont.systemFont(ofSize: 18, weight: .light)
@@ -84,7 +84,7 @@ final class FilesTab: NSView {
             let home = FileManager.default.homeDirectoryForCurrentUser
             guard let enumerator = FileManager.default.enumerator(
                 at: home,
-                includingPropertiesForKeys: [.isRegularFileKey],
+                includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
                 options: [.skipsHiddenFiles, .skipsPackageDescendants]
             ) else { return }
 
@@ -94,8 +94,10 @@ final class FilesTab: NSView {
                     enumerator.skipDescendants()
                     continue
                 }
-                let isFile = (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile ?? false
-                if isFile { found.append(url) }
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+                if values?.isRegularFile == true || values?.isDirectory == true {
+                    found.append(url)
+                }
             }
 
             DispatchQueue.main.async {
@@ -119,7 +121,7 @@ final class FilesTab: NSView {
                 return match ? (url, score) : nil
             }
             .sorted { $0.1 > $1.1 }
-            .prefix(8)
+            .prefix(20)
             .map { $0.0 }
 
         tableView.reloadData()
@@ -128,7 +130,13 @@ final class FilesTab: NSView {
 
     private func revealSelected() {
         guard !filtered.isEmpty else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([filtered[selectedIndex]])
+        let url = filtered[selectedIndex]
+        let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+        if isDir {
+            NSWorkspace.shared.open(url)
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
     }
 
     // MARK: - Selection
@@ -136,12 +144,14 @@ final class FilesTab: NSView {
     func resetSelection() {
         selectedIndex = 0
         tableView.reloadData()
+        tableView.scrollRowToVisible(0)
     }
 
     private func moveSelection(by delta: Int) {
         guard !filtered.isEmpty else { return }
         selectedIndex = max(0, min(filtered.count - 1, selectedIndex + delta))
         tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
     }
 
     // MARK: - Focus

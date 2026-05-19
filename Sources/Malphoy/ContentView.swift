@@ -9,6 +9,8 @@ final class ContentView: NSView {
     private let calculatorTab: CalculatorTab
     private var tabs: [NSView] = []
 
+    private var tabLabels: [NSTextField] = []
+
     override init(frame: NSRect) {
         appsTab = AppsTab(frame: .zero)
         filesTab = FilesTab(frame: .zero)
@@ -21,6 +23,27 @@ final class ContentView: NSView {
 
         tabs = [appsTab, filesTab, todoTab, calculatorTab]
 
+        let separator = NSView()
+        separator.wantsLayer = true
+        separator.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.08).cgColor
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(separator)
+
+        let tabBar = buildTabBar()
+        addSubview(tabBar)
+
+        NSLayoutConstraint.activate([
+            tabBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            tabBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tabBar.bottomAnchor.constraint(equalTo: bottomAnchor),
+            tabBar.heightAnchor.constraint(equalToConstant: 36),
+
+            separator.leadingAnchor.constraint(equalTo: leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: trailingAnchor),
+            separator.bottomAnchor.constraint(equalTo: tabBar.topAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1),
+        ])
+
         for tab in tabs {
             tab.translatesAutoresizingMaskIntoConstraints = false
             addSubview(tab)
@@ -28,7 +51,7 @@ final class ContentView: NSView {
                 tab.topAnchor.constraint(equalTo: topAnchor),
                 tab.leadingAnchor.constraint(equalTo: leadingAnchor),
                 tab.trailingAnchor.constraint(equalTo: trailingAnchor),
-                tab.bottomAnchor.constraint(equalTo: bottomAnchor),
+                tab.bottomAnchor.constraint(equalTo: separator.topAnchor),
             ])
         }
 
@@ -63,10 +86,38 @@ final class ContentView: NSView {
         }
     }
 
+    private func buildTabBar() -> NSStackView {
+        let names = ["Apps", "Files", "Todo", "Calculator"]
+        let stack = NSStackView()
+        stack.orientation = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 0
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        for name in names {
+            let label = NSTextField(labelWithString: name)
+            label.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+            label.alignment = .center
+            tabLabels.append(label)
+            stack.addArrangedSubview(label)
+        }
+
+        return stack
+    }
+
     private func switchTab() {
         tabs.forEach { $0.isHidden = true }
         tabs[currentTab].isHidden = false
+        updateTabBar()
         focusCurrentTabInput()
+    }
+
+    private func updateTabBar() {
+        for (i, label) in tabLabels.enumerated() {
+            label.textColor = i == currentTab
+                ? NSColor.white.withAlphaComponent(0.85)
+                : NSColor.white.withAlphaComponent(0.25)
+        }
     }
 
     private func focusCurrentTabInput() {
@@ -81,6 +132,7 @@ final class ContentView: NSView {
 
     func reset() {
         currentTab = 0
+        todoTab.reload()
         switchTab()
     }
 }

@@ -1,16 +1,22 @@
 import AppKit
 
+// Borderless NSPanel/NSWindow cannot become key by default — override so keyboard events are delivered.
+final class LauncherPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 final class WindowController {
-    private var panel: NSPanel!
+    private var panel: LauncherPanel!
     private var contentView: ContentView!
 
     init() {
         let width: CGFloat = 680
         let height: CGFloat = 450
 
-        panel = NSPanel(
+        panel = LauncherPanel(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
-            styleMask: [.borderless, .nonactivatingPanel],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
@@ -55,9 +61,15 @@ final class WindowController {
 
     func show() {
         center()
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         panel.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        contentView.reset()
+        DispatchQueue.main.async { [weak self] in
+            self?.contentView.reset()
+        }
     }
 
     func hide() {

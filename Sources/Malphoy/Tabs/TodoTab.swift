@@ -122,12 +122,20 @@ final class TodoTab: NSView {
         guard count > 0 else { return }
         selectedIndex = max(0, min(count - 1, selectedIndex + delta))
         tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
     }
 
     // MARK: - Focus
 
     func focusInput() {
         window?.makeFirstResponder(inputField)
+    }
+
+    func reload() {
+        TodoStore.shared.reload()
+        selectedIndex = 0
+        tableView.reloadData()
+        refreshEmptyState()
     }
 
     // MARK: - Keyboard

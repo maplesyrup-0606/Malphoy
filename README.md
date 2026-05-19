@@ -104,25 +104,20 @@ A live expression evaluator.
 
 - macOS only
 - Personal use — no App Store distribution, no signing required
-- Build with Xcode, run directly
+- Built with Swift Package Manager — no Xcode project file required
 
 ---
 
 ## Installation
 
-### 1. Clone and open
+### 1. Clone
 
 ```bash
 git clone <your-repo-url>
 cd Malphoy
-open Package.swift   # opens in Xcode
 ```
 
 ### 2. Build and run
-
-In Xcode: select **My Mac** as the target, then `⌘R` to build and run.
-
-Or via command line:
 
 ```bash
 swift build -c release

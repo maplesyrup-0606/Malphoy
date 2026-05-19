@@ -11,7 +11,7 @@ func hotKeyHandler(nextHandler: EventHandlerCallRef?, event: EventRef?, userDate
 
 final class HotkeyManager {
         private var hotKeyRef: EventHotKeyRef?
-        private let onTrigger: () -> Void
+        let onTrigger: () -> Void
 
         init(onTrigger: @escaping () -> Void) {
             self.onTrigger = onTrigger

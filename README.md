@@ -117,47 +117,62 @@ git clone <your-repo-url>
 cd Malphoy
 ```
 
-### 2. Build and run
+### 2. Build the app bundle
 
 ```bash
 swift build -c release
-.build/release/Malphoy
+mkdir -p /Applications/Malphoy.app/Contents/MacOS
+cp .build/release/Malphoy /Applications/Malphoy.app/Contents/MacOS/Malphoy
 ```
 
-### 3. Configure the to-do file
+An `Info.plist` is required alongside the binary so macOS treats it as a proper background app (no Terminal window, no Dock icon):
 
-Create the config directory and `.env` file:
+```
+/Applications/Malphoy.app/
+  Contents/
+    MacOS/
+      Malphoy
+    Info.plist
+```
+
+The `Info.plist` is already committed in the repo. Copy it into place:
+
+```bash
+cp Info.plist /Applications/Malphoy.app/Contents/Info.plist
+```
+
+Then launch:
+
+```bash
+open /Applications/Malphoy.app
+```
+
+> **Rebuilding:** After any `swift build -c release`, re-run the `cp` for the binary only — the `Info.plist` stays in place.
+
+### 3. Configure the to-do file
 
 ```bash
 mkdir -p ~/.config/malphoy
 echo 'MALPHOY_TODOS_PATH=/absolute/path/to/your/todos.md' > ~/.config/malphoy/.env
 ```
 
-Make sure the markdown file exists before launching. If you're using Obsidian, symlink your vault file to the same path:
-
-```bash
-ln -s /path/to/ObsidianVault/todos.md /absolute/path/to/your/todos.md
-```
-
-Or point `MALPHOY_TODOS_PATH` directly at the file inside your vault.
+Point `MALPHOY_TODOS_PATH` at any markdown file. If you use Obsidian, point it directly at the file inside your vault — no symlink needed.
 
 ### 4. Grant Accessibility permission
 
 Malphoy registers a global hotkey (`⌘Space`) using the Carbon API. macOS requires Accessibility access for this:
 
 1. Open **System Settings → Privacy & Security → Accessibility**
-2. Add Malphoy (or your terminal / Xcode if running from there)
+2. Add **Malphoy**
 
 Without this, `⌘Space` won't trigger the launcher.
 
 ### 5. Auto-launch on login (optional)
 
-To have Malphoy start automatically:
+1. Open **System Settings → General → Login Items**
+2. Click `+` and add `/Applications/Malphoy.app`
 
-1. Build a release binary: `swift build -c release`
-2. Copy it somewhere permanent: `cp .build/release/Malphoy ~/Applications/Malphoy`
-3. Open **System Settings → General → Login Items**
-4. Add `~/Applications/Malphoy`
+It will start silently on login with no Dock icon or Terminal window.
 
 ### Notes
 

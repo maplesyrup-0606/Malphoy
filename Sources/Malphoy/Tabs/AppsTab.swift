@@ -11,6 +11,8 @@ final class AppsTab: NSView {
     private let tableView: NSTableView
     private let scrollView: NSScrollView
 
+    private var directoryWatcher: DispatchSourceFileSystemObject?
+
     override init(frame: NSRect) {
         searchField = NSTextField(frame: .zero)
         tableView = NSTableView(frame: .zero)
@@ -21,6 +23,7 @@ final class AppsTab: NSView {
         setupSearchField()
         setupTableView()
         loadApps()
+        watchAppsDirectory()
     }
 
     required init?(coder: NSCoder) {
@@ -76,30 +79,59 @@ final class AppsTab: NSView {
         ])
     }
 
-    // MARK: - Logic (your territory)
+    // MARK: - Logic
 
     func loadApps() {
-        let fm = FileManager.default
-        let dirs: [URL] = [
-            URL(fileURLWithPath: "/Applications"),
-            URL(fileURLWithPath: "/System/Applications"),
-            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications"),
-        ]
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            let fm = FileManager.default
+            let dirs: [URL] = [
+                URL(fileURLWithPath: "/Applications"),
+                URL(fileURLWithPath: "/System/Applications"),
+                FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications"),
+            ]
 
-        var found: [URL] = []
-        for dir in dirs {
-            guard let enumerator = fm.enumerator(at: dir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { continue }
-            for case let url as URL in enumerator {
-                if url.pathExtension == "app" {
-                    found.append(url)
-                    enumerator.skipDescendants()
+            var found: [URL] = []
+            for dir in dirs {
+                guard let enumerator = fm.enumerator(at: dir, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) else { continue }
+                for case let url as URL in enumerator {
+                    if url.pathExtension == "app" {
+                        found.append(url)
+                        enumerator.skipDescendants()
+                    }
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.apps = found
+                let query = self.searchField.stringValue
+                if query.isEmpty {
+                    self.filtered = found
+                    self.tableView.reloadData()
+                } else {
+                    self.filterApps(query: query)
                 }
             }
         }
+    }
 
-        apps = found
-        filtered = found
-        tableView.reloadData()
+    private func watchAppsDirectory() {
+        let fd = open("/Applications", O_EVTONLY)
+        guard fd >= 0 else { return }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            self?.loadApps()
+        }
+        source.setCancelHandler {
+            close(fd)
+        }
+        source.resume()
+        directoryWatcher = source
     }
 
     private func filterApps(query: String) {

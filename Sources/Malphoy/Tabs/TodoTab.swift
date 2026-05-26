@@ -111,14 +111,46 @@ final class TodoTab: NSView {
         refreshEmptyState()
     }
 
+    private func addSubTodo(text: String) {
+        let rows = TodoStore.shared.flatRows
+        guard !rows.isEmpty, selectedIndex < rows.count else {
+            addTodo()
+            return
+        }
+
+        let parentIndex: Int
+        switch rows[selectedIndex].kind {
+        case .parent(let pi): parentIndex = pi
+        case .child(let pi, _): parentIndex = pi
+        }
+
+        TodoStore.shared.addChild(text: text, toParentAt: parentIndex)
+        inputField.stringValue = ""
+
+        // Select the newly added child row
+        let newChildIndex = TodoStore.shared.items[parentIndex].children.count - 1
+        let updatedRows = TodoStore.shared.flatRows
+        if let newRowIndex = updatedRows.firstIndex(where: {
+            if case .child(let pi, let ci) = $0.kind { return pi == parentIndex && ci == newChildIndex }
+            return false
+        }) {
+            selectedIndex = newRowIndex
+        }
+
+        tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
+        refreshEmptyState()
+    }
+
     private func toggleSelected() {
-        guard !TodoStore.shared.items.isEmpty else { return }
+        guard !TodoStore.shared.flatRows.isEmpty else { return }
         TodoStore.shared.toggle(at: selectedIndex)
         tableView.reloadData()
+        tableView.scrollRowToVisible(selectedIndex)
     }
 
     private func moveSelection(by delta: Int) {
-        let count = TodoStore.shared.items.count
+        let count = TodoStore.shared.flatRows.count
         guard count > 0 else { return }
         selectedIndex = max(0, min(count - 1, selectedIndex + delta))
         tableView.reloadData()
@@ -180,7 +212,11 @@ extension TodoTab: NSTextFieldDelegate {
             moveSelection(by: -1)
             return true
         case #selector(NSResponder.insertNewline(_:)):
-            if !inputField.stringValue.trimmingCharacters(in: .whitespaces).isEmpty {
+            let text = inputField.stringValue.trimmingCharacters(in: .whitespaces)
+            let shiftHeld = NSApp.currentEvent?.modifierFlags.contains(.shift) ?? false
+            if shiftHeld && !text.isEmpty {
+                addSubTodo(text: text)
+            } else if !text.isEmpty {
                 addTodo()
             } else {
                 toggleSelected()
@@ -196,15 +232,25 @@ extension TodoTab: NSTextFieldDelegate {
 
 extension TodoTab: NSTableViewDataSource {
     func numberOfRows(in tableView: NSTableView) -> Int {
-        TodoStore.shared.items.count
+        TodoStore.shared.flatRows.count
     }
 }
 
 // MARK: - NSTableViewDelegate
 
 extension TodoTab: NSTableViewDelegate {
+    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+        let rows = TodoStore.shared.flatRows
+        guard row < rows.count else { return 44 }
+        return rows[row].isChild ? 36 : 44
+    }
+
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let item = TodoStore.shared.items[row]
+        let rows = TodoStore.shared.flatRows
+        guard row < rows.count else { return nil }
+        let flatRow = rows[row]
+        let item = flatRow.item
+        let isChild = flatRow.isChild
 
         let container = NSView()
         container.wantsLayer = true
@@ -214,21 +260,28 @@ extension TodoTab: NSTableViewDelegate {
             container.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.1).cgColor
         }
 
-        let check = NSTextField(frame: NSRect(x: 14, y: 12, width: 20, height: 20))
-        check.stringValue = item.isDone ? "✓" : "○"
+        let indent: CGFloat = isChild ? 26 : 0
+        let rowHeight: CGFloat = isChild ? 36 : 44
+        let checkY = (rowHeight - 20) / 2
+
+        let check = NSTextField(frame: NSRect(x: 14 + indent, y: checkY, width: 20, height: 20))
+        check.stringValue = item.isDone ? "✓" : (isChild ? "◦" : "○")
         check.isEditable = false
         check.isBezeled = false
         check.drawsBackground = false
         check.textColor = item.isDone ? .systemGreen : NSColor.white.withAlphaComponent(0.35)
-        check.font = NSFont.systemFont(ofSize: 14)
+        check.font = NSFont.systemFont(ofSize: isChild ? 12 : 14)
 
-        let label = NSTextField(frame: NSRect(x: 44, y: 12, width: tableView.frame.width - 56, height: 20))
+        let labelX: CGFloat = 14 + indent + 26
+        let label = NSTextField(frame: NSRect(x: labelX, y: checkY, width: tableView.frame.width - labelX - 12, height: 20))
         label.stringValue = item.text
         label.isEditable = false
         label.isBezeled = false
         label.drawsBackground = false
-        label.textColor = item.isDone ? NSColor.white.withAlphaComponent(0.35) : .white
-        label.font = NSFont.systemFont(ofSize: 14, weight: item.isDone ? .light : .regular)
+        label.textColor = item.isDone
+            ? NSColor.white.withAlphaComponent(0.35)
+            : (isChild ? NSColor.white.withAlphaComponent(0.75) : .white)
+        label.font = NSFont.systemFont(ofSize: isChild ? 13 : 14, weight: item.isDone ? .light : .regular)
 
         container.addSubview(check)
         container.addSubview(label)

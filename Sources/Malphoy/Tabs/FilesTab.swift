@@ -88,13 +88,19 @@ final class FilesTab: NSView {
                 options: [.skipsHiddenFiles, .skipsPackageDescendants]
             ) else { return }
 
+            let skipDirs: Set<String> = ["Library", "node_modules", ".Trash", "vendor", "Pods"]
             var found: [URL] = []
             for case let url as URL in enumerator {
-                if url.lastPathComponent.hasPrefix(".") {
+                let name = url.lastPathComponent
+                if name.hasPrefix(".") {
                     enumerator.skipDescendants()
                     continue
                 }
                 let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+                if values?.isDirectory == true && skipDirs.contains(name) {
+                    enumerator.skipDescendants()
+                    continue
+                }
                 if values?.isRegularFile == true || values?.isDirectory == true {
                     found.append(url)
                 }
@@ -137,6 +143,7 @@ final class FilesTab: NSView {
         } else {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         }
+        window?.orderOut(nil)
     }
 
     // MARK: - Selection
